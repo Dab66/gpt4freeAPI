@@ -6,6 +6,7 @@ import os
 import asyncio
 from functools import wraps
 from dotenv import load_dotenv
+from flask_cors import CORS  # Import CORS for handling cross-origin requests
 
 # Fix for Windows ProactorEventLoop warning
 if os.name == 'nt':  # For Windows
@@ -15,6 +16,7 @@ if os.name == 'nt':  # For Windows
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Get API key from environment variable
 API_KEY = os.getenv('API_KEY')
@@ -111,6 +113,16 @@ def chat():
     except Exception as e:
         print(f"Unexpected error: {e}")
         return jsonify(format_bolt_response(f"An unexpected error occurred: {str(e)}", status="error")), 500
+
+@app.route('/api/chat/models', methods=['GET'])
+@require_api_key
+def get_models():
+    models = [
+        {"name": "gpt-4o", "description": "GPT-4 Optimized"},
+        {"name": "gpt-4", "description": "GPT-4"},
+        # Add more models as needed
+    ]
+    return jsonify(models), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
