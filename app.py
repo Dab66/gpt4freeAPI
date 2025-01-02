@@ -16,7 +16,7 @@ if os.name == 'nt':  # For Windows
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app, resources={r"/api/*": {"origins": "https://627b0e63.bolt-diy-eiq.pages.dev"}})  # Allow specific origin
 
 # Get API key from environment variable
 API_KEY = os.getenv('API_KEY')
@@ -117,12 +117,25 @@ def chat():
 @app.route('/api/chat/models', methods=['GET'])
 @require_api_key
 def get_models():
+    # Example list of models; replace with your actual model retrieval logic
     models = [
         {"name": "gpt-4o", "description": "GPT-4 Optimized"},
         {"name": "gpt-4", "description": "GPT-4"},
         # Add more models as needed
     ]
     return jsonify(models), 200
+
+@app.route('/api/chat/api/tags', methods=['GET'])
+@require_api_key
+def get_tags():
+    # Example list of tags; replace with your actual logic to retrieve tags
+    tags = [
+        {"tag": "example1"},
+        {"tag": "example2"},
+        {"tag": "example3"},
+        # Add more tags as needed
+    ]
+    return jsonify(tags), 200
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
