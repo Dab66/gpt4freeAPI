@@ -38,12 +38,12 @@ def is_code(content):
     code_patterns = [r"def ", r"\{", r"\}", r";", r"class ", r"import ", r"function "]
     return any(re.search(pattern, content) for pattern in code_patterns)
 
-def format_bolt_response(content):
+def format_bolt_response(content, status="success"):
     """
     Format the response according to Bolt.DIY specifications
     """
     return {
-        "status": "success",
+        "status": status,
         "data": {
             "messages": [
                 {
@@ -59,10 +59,12 @@ def format_bolt_response(content):
 def chat():
     try:
         data = request.json
-        user_input = data.get("input", "")
+        if not data:
+            return jsonify(format_bolt_response("Invalid request payload", status="error")), 400
 
+        user_input = data.get("input", "")
         if not user_input:
-            return jsonify(format_bolt_response("No input provided")), 400
+            return jsonify(format_bolt_response("No input provided", status="error")), 400
 
         max_retries = 10
         retry_delay = 3
@@ -71,11 +73,13 @@ def chat():
         while attempt < max_retries:
             attempt += 1
             try:
+                # Call the g4f API
                 response = g4f.ChatCompletion.create(
                     model="gpt-4o",
                     messages=[{"role": "user", "content": user_input}],
                 )
 
+                # Parse the response
                 if isinstance(response, str):
                     generated_content = response
                 else:
@@ -89,23 +93,24 @@ def chat():
                 if is_code(generated_content):
                     return jsonify(format_bolt_response(generated_content))
 
-                # If no code found and not last attempt, try again
+                # If no code found and not last attempt, retry
                 if attempt < max_retries:
                     time.sleep(retry_delay)
                     continue
 
                 # If all retries exhausted and no code found
-                return jsonify(format_bolt_response("Failed to generate a code response after multiple attempts.")), 500
+                return jsonify(format_bolt_response("Failed to generate a code response after multiple attempts.", status="error")), 500
 
             except Exception as e:
                 print(f"Attempt {attempt} failed: {e}")
                 if attempt < max_retries:
                     time.sleep(retry_delay)
                 else:
-                    return jsonify(format_bolt_response("Failed to generate a valid response after multiple attempts.")), 500
+                    return jsonify(format_bolt_response(f"Error: {str(e)}", status="error")), 500
 
     except Exception as e:
-        return jsonify(format_bolt_response(f"An error occurred: {str(e)}")), 500
+        print(f"Unexpected error: {e}")
+        return jsonify(format_bolt_response(f"An unexpected error occurred: {str(e)}", status="error")), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
